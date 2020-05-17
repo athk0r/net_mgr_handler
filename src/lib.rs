@@ -2,7 +2,7 @@ extern crate dbus;
 mod manager;
 mod device;
 mod networkmanager;
-mod network_IP4Config;
+mod network_ip4_config;
 mod network_device;
 
 pub use manager::NetworkManager;

@@ -4,15 +4,8 @@ use std::time::Duration;
 use std::collections::HashMap;
 use std::fmt;
 use dbus::arg::{Variant, RefArg};
-macro_rules! proxy {
-    ($self:ident) => {
-        Connection::new_system().unwrap().with_proxy("org.freedesktop.NetworkManager",
-                            $self.path,
-                            Duration::new(5, 0))
-    }
-}
 
-type dbus_options<'a> = HashMap<&'a str, Variant<Box<RefArg>>>;
+type DbusOptions<'a> = HashMap<&'a str, Variant<Box<dyn RefArg>>>;
 
 pub struct Device<'a> {
     path: dbus::Path<'a>,
@@ -29,9 +22,9 @@ impl<'a> Device<'a> {
                                    &self.path,
                                    Duration::new(5, 0));
 
-        let options: dbus_options = HashMap::new();
+        let options: DbusOptions = HashMap::new();
         let old_last_scan = proxy.last_scan().unwrap();
-        proxy.request_scan(options);
+        let _result = proxy.request_scan(options);
         let mut new_last_scan = proxy.last_scan().unwrap();
 
         while old_last_scan == new_last_scan {
@@ -67,5 +60,15 @@ mod tests {
         let device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
         device.scan();
         assert!(device.get_all_access_points().len() > 1);
+    }
+
+    #[test]
+    fn test_get_all_access_points() {
+        let manager = NetworkManager::new_system();
+        let device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
+        device.scan();
+        let aps = device.get_all_access_points();
+        println!("AccessPoints: {:#?}", aps);
+        assert!(aps.len() > 1);
     }
 }
