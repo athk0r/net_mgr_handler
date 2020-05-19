@@ -1,7 +1,7 @@
 use dbus::blocking::{Connection};
 use crate::networkmanager::OrgFreedesktopNetworkManager;
 use std::time::Duration;
-use crate::device::Device;
+use crate::wireless_device::WirelessDevice;
 use dbus::Error;
 
 const PATH_NETWORK_MANAGER: &str = "/org/freedesktop/NetworkManager";
@@ -24,19 +24,19 @@ impl NetworkManager{
         NetworkManager{ con: connection }
     }
 
-    pub fn get_all_devices(&self) -> Result<Vec<Device<'static>>, Error> {
+    pub fn get_all_devices(&self) -> Result<Vec<WirelessDevice<'static>>, Error> {
         let devices: Vec<dbus::Path> = call_on_proxy!(self, PATH_NETWORK_MANAGER).get_all_devices()?;
-        let mut ret: Vec<Device> = Vec::new();
+        let mut ret: Vec<WirelessDevice> = Vec::new();
         for device in devices {
-            ret.push(Device::new_from_path(device));
+            ret.push(WirelessDevice::new_from_path(device));
         }
         println!("{:?}", ret);
         Ok(ret)
     }
 
-    pub fn get_device_by_ip_iface(&self, s: &str) -> Result<Device<'static>, Error> {
+    pub fn get_device_by_ip_iface(&self, s: &str) -> Result<WirelessDevice<'static>, Error> {
         let device_path: dbus::Path = call_on_proxy!(self, PATH_NETWORK_MANAGER).get_device_by_ip_iface(s)?;
-        Ok(Device::new_from_path(device_path))
+        Ok(WirelessDevice::new_from_path(device_path))
     }
 }
 
