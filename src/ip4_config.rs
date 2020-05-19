@@ -8,6 +8,7 @@ type DbusOptions = HashMap<String, Variant<Box<dyn RefArg>>>;
 
 pub struct Ip4Config<'a> {
     pub path: dbus::Path<'a>,
+    pub ip: String,
     pub nameserver: String
 }
 
@@ -17,14 +18,16 @@ impl<'a> Ip4Config<'a> {
             return None;
         }
         let nameserver = self::Ip4Config::get_nameserver(&p);
+        let ip_address = self::Ip4Config::get_ip(&p);
 
         Some(Ip4Config {
             path: p,
+            ip: ip_address.to_string(),
             nameserver: nameserver.to_string()
         })
     }
 
-    fn get_nameserver<'f>(p: &'a dbus::Path ) -> String {
+    fn get_nameserver<'f>(p: &'a dbus::Path) -> String {
         use crate::nm_ip4_config::OrgFreedesktopNetworkManagerIP4Config;
         let con = Connection::new_system().unwrap();
         let proxy = con.with_proxy("org.freedesktop.NetworkManager",
@@ -33,6 +36,23 @@ impl<'a> Ip4Config<'a> {
 
         let nameserver: Vec<DbusOptions> = proxy.nameserver_data().unwrap();
         for data in nameserver {
+            if data.contains_key("address") {
+                let addr_data = data.get_key_value("address").unwrap();
+                let ret = addr_data.1.as_str().clone().unwrap();
+                return ret.to_string();
+            }
+        }
+        "".to_string()
+    }
+
+    fn get_ip<'f>(p: &'a dbus::Path) -> String {
+        use crate::nm_ip4_config::OrgFreedesktopNetworkManagerIP4Config;
+        let con = Connection::new_system().unwrap();
+        let proxy = con.with_proxy("org.freedesktop.NetworkManager",
+                                   p,
+                                   Duration::new(5, 0));
+        let ip_data: Vec<DbusOptions> = proxy.address_data().unwrap();
+        for data in ip_data {
             if data.contains_key("address") {
                 let addr_data = data.get_key_value("address").unwrap();
                 let ret = addr_data.1.as_str().clone().unwrap();
