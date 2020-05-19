@@ -1,3 +1,4 @@
+#[derive(Clone, Debug, PartialEq)]
 pub enum DeviceType {
     Unknown,
     Ethernet,
@@ -24,8 +25,8 @@ pub enum DeviceType {
     Dummy,
 }
 
-impl From<i64> for DeviceType {
-    fn from(device_type: i64) -> Self {
+impl From<u32> for DeviceType {
+    fn from(device_type: u32) -> Self {
         match device_type {
             0 => DeviceType::Unknown,
             1 => DeviceType::Ethernet,
