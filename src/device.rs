@@ -7,6 +7,7 @@ use crate::device_type::DeviceType;
 use crate::ip4_config::Ip4Config;
 use crate::dhcp4_config::Dhcp4Config;
 use crate::active_connection::ActiveConnection;
+use crate::access_point::AccessPoint;
 
 type DbusOptions<'a> = HashMap<&'a str, Variant<Box<dyn RefArg>>>;
 
@@ -22,7 +23,7 @@ pub struct Device<'a> {
 pub struct WirelessDevice<'a> {
     pub device: &'a Device<'a>,
     pub hw_address: String,
-    pub active_access_point: Option<dbus::Path<'a>>
+    pub active_access_point: Option<AccessPoint<'a>>
 }
 
 impl<'a> Device<'a> {
@@ -143,7 +144,7 @@ impl<'a> WirelessDevice<'a> {
         }
     }
 
-    pub fn get_all_access_points(&self) -> Vec<dbus::Path<'static>>{
+    pub fn get_all_access_points(&self) -> Vec<Option<AccessPoint>>{
         use crate::nm_device::OrgFreedesktopNetworkManagerDeviceWireless;
 
         let con = Connection::new_system().unwrap();
@@ -151,7 +152,11 @@ impl<'a> WirelessDevice<'a> {
                                    &self.device.path,
                                    Duration::new(5, 0));
         let access_points: Vec<dbus::Path<'static>> = proxy.get_all_access_points().unwrap();
-        access_points
+        let mut ret: Vec<Option<AccessPoint>> = Vec::new();
+        for ac in access_points {
+            ret.push(AccessPoint::from_path(ac));
+        }
+        ret
     }
 
     pub fn get_active_access_point(&mut self) {
@@ -161,7 +166,20 @@ impl<'a> WirelessDevice<'a> {
         let proxy = con.with_proxy("org.freedesktop.NetworkManager",
                                    &self.device.path,
                                    Duration::new(5, 0));
-        self.active_access_point = Some(proxy.active_access_point().unwrap());
+        let active_ap = AccessPoint::from_path(proxy.active_access_point().unwrap());
+        self.active_access_point = active_ap;
+    }
+
+    pub fn get_access_point_by_ssid(&self, s: String) -> Option<AccessPoint>{
+        self::WirelessDevice::scan(&self);
+        let all_ap = self::WirelessDevice::get_all_access_points(&self);
+        for ap in all_ap {
+            let tmp_ap = ap.clone();
+            if tmp_ap.is_some() && tmp_ap.unwrap().ssid.eq(&s) {
+                return ap.clone();
+            }
+        }
+        None
     }
 }
 
@@ -208,7 +226,7 @@ mod tests {
         let wireless_device = WirelessDevice::new_from_device(&device);
         wireless_device.scan();
         let aps = wireless_device.get_all_access_points();
-        //println!("AccessPoints: {:#?}", aps);
+        println!("AccessPoints: {:#?}", aps);
         assert!(aps.len() > 1);
     }
 }

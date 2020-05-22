@@ -1,13 +1,17 @@
 extern crate dbus;
 mod manager;
-mod device;
 mod nm_networkmanager;
-mod nm_ip4_config;
+mod device;
 mod nm_device;
 mod device_type;
 mod ip4_config;
+mod nm_ip4_config;
 mod dhcp4_config;
 mod active_connection;
+mod nm_active_connection;
+mod access_point;
+mod nm_access_point;
+mod connection;
 
 pub use manager::NetworkManager;
 
