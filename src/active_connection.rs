@@ -1,7 +1,8 @@
 use std::fmt;
 
+#[derive(Clone)]
 pub struct ActiveConnection<'a> {
-    path: dbus::Path<'a>
+    pub path: dbus::Path<'a>
 }
 
 impl<'a> ActiveConnection<'a> {

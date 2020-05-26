@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(Clone)]
 pub struct Dhcp4Config<'a> {
     path: dbus::Path<'a>
 }

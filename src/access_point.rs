@@ -5,7 +5,8 @@ use std::fmt;
 #[derive(Clone)]
 pub struct AccessPoint<'a> {
     pub path: dbus::Path<'a>,
-    pub ssid: String
+    pub ssid: String,
+    pub hw_address: String
 }
 
 impl<'a> AccessPoint<'a> {
@@ -14,10 +15,12 @@ impl<'a> AccessPoint<'a> {
             return None;
         }
         let ssid = self::AccessPoint::get_ssid(&p);
+        let hw_addr = self::AccessPoint::get_hw_address(&p);
 
         Some(AccessPoint {
             path: p,
-            ssid: ssid
+            ssid: ssid,
+            hw_address: hw_addr
         })
     }
 
@@ -30,6 +33,17 @@ impl<'a> AccessPoint<'a> {
 
         let ssid = proxy.ssid().unwrap();
         String::from_utf8(ssid).unwrap()
+    }
+
+    fn get_hw_address(p: &'a dbus::Path) -> String {
+        use crate::nm_access_point::OrgFreedesktopNetworkManagerAccessPoint;
+        let con = Connection::new_system().unwrap();
+        let proxy = con.with_proxy("org.freedesktop.NetworkManager",
+                                   p,
+                                   Duration::new(5, 0));
+
+        let hw_addr = proxy.hw_address().unwrap();
+        hw_addr
     }
 }
 

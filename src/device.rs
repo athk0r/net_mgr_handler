@@ -11,6 +11,7 @@ use crate::access_point::AccessPoint;
 
 type DbusOptions<'a> = HashMap<&'a str, Variant<Box<dyn RefArg>>>;
 
+#[derive(Clone)]
 pub struct Device<'a> {
     pub path: dbus::Path<'a>,
     pub active_connection: Option<ActiveConnection<'a>>,
@@ -20,6 +21,7 @@ pub struct Device<'a> {
     pub device_type: DeviceType
 }
 
+#[derive(Clone)]
 pub struct WirelessDevice<'a> {
     pub device: &'a Device<'a>,
     pub hw_address: String,
@@ -170,12 +172,12 @@ impl<'a> WirelessDevice<'a> {
         self.active_access_point = active_ap;
     }
 
-    pub fn get_access_point_by_ssid(&self, s: String) -> Option<AccessPoint>{
+    pub fn get_access_point_by_ssid(&self, s: &str) -> Option<AccessPoint>{
         self::WirelessDevice::scan(&self);
         let all_ap = self::WirelessDevice::get_all_access_points(&self);
         for ap in all_ap {
             let tmp_ap = ap.clone();
-            if tmp_ap.is_some() && tmp_ap.unwrap().ssid.eq(&s) {
+            if tmp_ap.is_some() && tmp_ap.unwrap().ssid.eq(&s.to_string()) {
                 return ap.clone();
             }
         }

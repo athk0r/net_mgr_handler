@@ -6,6 +6,7 @@ use std::fmt;
 
 type DbusOptions = HashMap<String, Variant<Box<dyn RefArg>>>;
 
+#[derive(Clone)]
 pub struct Ip4Config<'a> {
     pub path: dbus::Path<'a>,
     pub ip: String,

@@ -12,6 +12,9 @@ mod nm_active_connection;
 mod access_point;
 mod nm_access_point;
 mod connection;
+mod setting;
+mod nm_settings;
+mod nm_con_settings;
 
 pub use manager::NetworkManager;
 
