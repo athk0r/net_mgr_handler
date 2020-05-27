@@ -57,6 +57,21 @@ impl<'a> Device<'a> {
         active_connection
     }
 
+    pub fn refresh_active_connection(&mut self) {
+        use crate::nm_device::OrgFreedesktopNetworkManagerDevice;
+        let con = Connection::new_system().unwrap();
+        let proxy = con.with_proxy("org.freedesktop.NetworkManager",
+                                   self.path.clone(),
+                                   Duration::new(5, 0));
+
+        let ac = proxy.active_connection();
+        if ac.is_ok() {
+            self.active_connection = ActiveConnection::from_path(ac.unwrap());
+        } else {
+            self.active_connection = None;
+        }
+    }
+
     fn get_dhcp4_config<'f>(p: &'a dbus::Path) -> dbus::Path<'f> {
         use crate::nm_device::OrgFreedesktopNetworkManagerDevice;
         let con = Connection::new_system().unwrap();
@@ -228,7 +243,6 @@ mod tests {
         let wireless_device = WirelessDevice::new_from_device(&device);
         wireless_device.scan();
         let aps = wireless_device.get_all_access_points();
-        println!("AccessPoints: {:#?}", aps);
         assert!(aps.len() > 1);
     }
 }

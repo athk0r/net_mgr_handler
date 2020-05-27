@@ -70,66 +70,79 @@ impl NetworkManager{
         Ok(Device::new_from_path(device_path))
     }
 
-    pub fn add_and_activate_wifi_connection(&self, wd: WirelessDevice, ap: AccessPoint, psk: &str) {
+    pub fn add_and_activate_wifi_connection(&self, wd: WirelessDevice, ap: AccessPoint, psk: &str) -> Result<(), Error> {
         let con = get_connection_settings_802_11_wireless(psk);
-        //let dev = self::NetworkManager::get_device_by_ip_iface(&self,"wlp2s0").unwrap();
-        //let dev_path = dev.path.clone();
-        //let wifi = WirelessDevice::new_from_device(&dev);
-        //let so = wifi.get_access_point_by_ssid("Compact_bd3e".to_string()).unwrap();
         let wd_path = wd.device.path.clone();
-        let result = call_on_proxy!(self, PATH_NETWORK_MANAGER).add_and_activate_connection(con, wd_path, ap.path);
+        let result: Result<(dbus::Path, dbus::Path), dbus::Error>= call_on_proxy!(self, PATH_NETWORK_MANAGER).add_and_activate_connection(con, wd_path, ap.path);
         println!("Connect result: {:?}", result);
+        if result.is_ok() {
+            return Ok(())
+        }
+        Err(result.err().unwrap())
     }
 
-    pub fn activate_connection(&self, wd: WirelessDevice, ap: AccessPoint) {
+    pub fn activate_connection(&self, wd: WirelessDevice, ap: AccessPoint) -> Result<(), Error>{
         let con: dbus::Path = dbus::strings::Path::new("/").unwrap();
         let wd_path = wd.device.path.clone();
-        let result = call_on_proxy!(self, PATH_NETWORK_MANAGER).activate_connection(con, wd_path, ap.path);
+        let result: Result<dbus::Path, dbus::Error> = call_on_proxy!(self, PATH_NETWORK_MANAGER).activate_connection(con, wd_path, ap.path);
+        if result.is_ok() {
+            return Ok(());
+        }
+        Err(Error::new_failed("Error activating Connection"))
     }
 
     pub fn deactivate_connection(&self, d: Device) -> Result<(), Error>{
         if d.active_connection.is_some() {
-            let result = call_on_proxy!(self, PATH_NETWORK_MANAGER).deactivate_connection(d.active_connection.unwrap().path);
-            return Ok(());
+            let result: Result<(), Error> = call_on_proxy!(self, PATH_NETWORK_MANAGER).deactivate_connection(d.active_connection.unwrap().path);
+            result
         } else {
             return Err(Error::new_failed("No Active Connection"));
         }
     }
 
-    pub fn connect_wifi(&self, wd: WirelessDevice, ap: AccessPoint, psk: &str) {
-
+    pub fn connect_wifi(&self, wd: WirelessDevice, ap: AccessPoint, psk: &str) -> Result<(), Error>{
+        if self::NetworkManager::find_existing_connection(&self, &ap) {
+            return self::NetworkManager::activate_connection(&self, wd, ap);
+        } else {
+            self::NetworkManager::add_and_activate_wifi_connection(&self, wd, ap, psk);
+        }
+        return Err(Error::new_failed("Error connecting to wifi"))
     }
 
     pub fn find_existing_connection(&self, ap: &AccessPoint) -> bool {
         use crate::nm_settings::OrgFreedesktopNetworkManagerSettings;
-        let result = call_on_proxy!(self, PATH_NETWORK_MANAGER_SETTINGS).list_connections().unwrap();
+        let setting_paths = call_on_proxy!(self, PATH_NETWORK_MANAGER_SETTINGS).list_connections().unwrap();
         let mut settings = Vec::new();
-        for p in result {
-            settings.push(Setting::from_path(p).unwrap());
+        for path in setting_paths {
+            settings.push(Setting::from_path(path).unwrap());
         }
-        println!("{:?}", settings);
+        //println!("{:?}", settings);
         for setting in settings {
+            let mut ssid: String;
+            let mut bssids: Vec<&str>;
+
             if setting.settings.contains_key("802-11-wireless") {
                 let wireless_settings = setting.settings.get_key_value("802-11-wireless").unwrap().1;
-                let ssid_u8 = wireless_settings.get_key_value("ssid").unwrap().1;
-                println!("ssid: {:?}", ssid_u8.0);
-                let mut x = ssid_u8.0.deref().as_iter().unwrap();
-                let y = x.deref_mut();
+                //Get SSID from WirelessSettings
+                let ssid_variant = wireless_settings.get_key_value("ssid").unwrap().1;
+                //println!("ssid: {:?}", ssid_variant.0);
+                let mut boxed_iter = ssid_variant.0.deref().as_iter().unwrap();
+                let iter = boxed_iter.deref_mut();
                 let mut utf8_vec = Vec::new();
-                for z in y {
-                    println!("{:?}", z.as_u64().unwrap());
-                    let m = u8::try_from(z.as_u64().unwrap()).unwrap();
-                    println!("m: {:?}", m);
-                    utf8_vec.push(m);
+                for item in iter {
+                    let utf8_char = u8::try_from(item.as_u64().unwrap()).unwrap();
+                    utf8_vec.push(utf8_char);
                 }
-                println!("utf8: {:?}", utf8_vec);
-                println!("ssid: {:?}", String::from_utf8(utf8_vec));
-                //println!("{:?}", x);
-                //let x = ssid_u8.0.deref().as_iter().unwrap().deref_mut().map(|x| x.as_any().downcast_ref::<u8>().unwrap());
-                //let y = x.as_str();
-                //println!("ssid: {:?}",x);
-                //let ssid = String::from_utf8(ssid_u8.unwrap()).unwrap();
-                //println!("ssid: {:?}", x);
+                //println!("ssidWord: {:?}", String::from_utf8(utf8_vec));
+                ssid = String::from_utf8(utf8_vec).unwrap();
+                //Get BSSID's from WirelessSettings
+                let bssid_variant = wireless_settings.get_key_value("seen-bssids").unwrap().1;
+                let mut bssid_iter = bssid_variant.0.deref().as_iter().unwrap();
+                bssids = bssid_iter.deref_mut().map(|x| x.as_str().unwrap()).collect();
+                // Test if Setting matches AccessPoint
+                if ssid.eq(&ap.ssid) && bssids.contains(&ap.hw_address.as_str()) {
+                    return true;
+                }
             }
         }
         false
@@ -139,6 +152,7 @@ impl NetworkManager{
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nm_device::OrgFreedesktopNetworkManagerDeviceWirelessAccessPointRemoved;
 
     #[test]
     fn test_get_all_devices() {
@@ -151,7 +165,6 @@ mod tests {
     fn test_get_device_by_ip_iface() {
         let manager = NetworkManager::new_system();
         let device = manager.get_device_by_ip_iface("wlp2s0");
-        //println!("{:?}", device);
         assert!(device.is_ok());
     }
 
@@ -162,30 +175,36 @@ mod tests {
         let wireless_device = WirelessDevice::new_from_device(&device);
         let ap = wireless_device.get_access_point_by_ssid("Compact_bd3e");
         if ap.is_some() {
-            manager.add_and_activate_wifi_connection(wireless_device.clone(), ap.unwrap().clone(), "test1234");
-            assert!(true);
-        } else {
-            eprintln!("WARNING: AP not found");
-            assert!(false);
+            let result = manager.add_and_activate_wifi_connection(wireless_device.clone(), ap.unwrap().clone(), "test1234");
+            manager.deactivate_connection(device.clone());
+            assert!(result.is_ok());
         }
     }
 
     #[test]
     fn test_deactivate_connection() {
         let manager = NetworkManager::new_system();
-        let device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
+        let mut device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
+        let wireless_device = WirelessDevice::new_from_device(&device);
+        let ap = wireless_device.get_access_point_by_ssid("UPC22AC955").unwrap();
+        let result_activate = manager.activate_connection(wireless_device.clone(), ap);
+        device.refresh_active_connection();
         let result = manager.deactivate_connection(device);
-        assert!(true);
+        eprintln!("{:?}", result_activate);
+        eprintln!("{:?}", result);
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_activate_connection() {
         let manager = NetworkManager::new_system();
         let device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
+        manager.deactivate_connection(device.clone());
         let wireless_device = WirelessDevice::new_from_device(&device);
         let ap = wireless_device.get_access_point_by_ssid("UPC22AC955").unwrap();
         let result = manager.activate_connection(wireless_device.clone(), ap);
-        assert!(true);
+        eprintln!("{:?}", result);
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -194,7 +213,21 @@ mod tests {
         let device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
         let wireless_device = WirelessDevice::new_from_device(&device);
         let ap = wireless_device.get_access_point_by_ssid("UPC22AC955").unwrap();
-        manager.find_existing_connection(&ap);
-        assert!(false);
+        let result = manager.find_existing_connection(&ap);
+        assert!(result);
+    }
+
+    #[test]
+    fn test_connect_wifi_known() {
+        // test if count of settings still the same
+        let manager = NetworkManager::new_system();
+        let device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
+        manager.deactivate_connection(device.clone());
+        let wireless_device = WirelessDevice::new_from_device(&device);
+        let ap = wireless_device.get_access_point_by_ssid("UPC22AC955").unwrap();
+        let result = manager.connect_wifi(wireless_device.clone(), ap, "x");
+        manager.deactivate_connection(device.clone());
+        eprintln!("{:?}", result);
+        assert!(result.is_ok());
     }
 }
