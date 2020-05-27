@@ -17,6 +17,9 @@ mod nm_settings;
 mod nm_con_settings;
 
 pub use manager::NetworkManager;
+pub use device::Device;
+pub use device::WirelessDevice;
+pub use access_point::AccessPoint;
 
 #[cfg(test)]
 mod tests {
