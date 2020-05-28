@@ -20,6 +20,7 @@ pub use manager::NetworkManager;
 pub use device::Device;
 pub use device::WirelessDevice;
 pub use access_point::AccessPoint;
+pub use ip4_config::Ip4Config;
 
 #[cfg(test)]
 mod tests {
