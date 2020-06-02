@@ -87,6 +87,8 @@ impl NetworkManager{
         let result: Result<dbus::Path, dbus::Error> = call_on_proxy!(self, PATH_NETWORK_MANAGER).activate_connection(con, wd_path, ap.path);
         if result.is_ok() {
             return Ok(());
+        } else {
+            return Err(result.err().unwrap())
         }
         Err(Error::new_failed("Error activating Connection"))
     }
