@@ -118,7 +118,7 @@ impl NetworkManager{
         if self::NetworkManager::find_existing_connection(&self, &ap) {
             return self::NetworkManager::activate_connection(&self, wd, ap);
         } else {
-            self::NetworkManager::add_and_activate_wifi_connection(&self, wd, ap, psk);
+            return self::NetworkManager::add_and_activate_wifi_connection(&self, wd, ap, psk);
         }
         return Err(Error::new_failed("Error connecting to wifi"))
     }
