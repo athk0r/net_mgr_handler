@@ -46,6 +46,13 @@ fn get_connection_settings_802_11_wireless(psk: &str) -> HashMap<&'static str, H
     ret
 }
 
+fn get_connection_settings_no_crypt() -> HashMap<&'static str, HashMap<&'static str, Variant<Box<dyn RefArg>>>> {
+    let mut ret: HashMap<&str, DbusOptions> = HashMap::new();
+    let mut options: DbusOptions = HashMap::new();
+    ret.insert("", options);
+    ret
+}
+
 pub struct NetworkManager {
     con: Connection,
 }
@@ -71,7 +78,12 @@ impl NetworkManager{
     }
 
     pub fn add_and_activate_wifi_connection(&self, wd: WirelessDevice, ap: AccessPoint, psk: &str) -> Result<(), Error> {
-        let con = get_connection_settings_802_11_wireless(psk);
+        let mut con;
+        if ap.wpa_flags != 0 {
+            con = get_connection_settings_802_11_wireless(psk);
+        } else {
+            con = get_connection_settings_no_crypt();
+        }
         let wd_path = wd.device.path.clone();
         let result: Result<(dbus::Path, dbus::Path), dbus::Error>= call_on_proxy!(self, PATH_NETWORK_MANAGER).add_and_activate_connection(con, wd_path, ap.path);
         println!("Connect result: {:?}", result);
@@ -175,7 +187,7 @@ mod tests {
         let manager = NetworkManager::new_system();
         let device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
         let wireless_device = WirelessDevice::new_from_device(&device);
-        let ap = wireless_device.get_access_point_by_ssid("Compact_bd3e");
+        let ap = wireless_device.get_access_point_by_ssid("catEmergNet-rpi1");
         if ap.is_some() {
             let result = manager.add_and_activate_wifi_connection(wireless_device.clone(), ap.unwrap().clone(), "test1234");
             manager.deactivate_connection(device.clone());

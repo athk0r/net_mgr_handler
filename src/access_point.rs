@@ -6,7 +6,8 @@ use std::fmt;
 pub struct AccessPoint<'a> {
     pub path: dbus::Path<'a>,
     pub ssid: String,
-    pub hw_address: String
+    pub hw_address: String,
+    pub wpa_flags: u32
 }
 
 impl<'a> AccessPoint<'a> {
@@ -16,11 +17,13 @@ impl<'a> AccessPoint<'a> {
         }
         let ssid = self::AccessPoint::get_ssid(&p);
         let hw_addr = self::AccessPoint::get_hw_address(&p);
+        let wpa_flags = self::AccessPoint::get_wpa_flags(&p);
 
         Some(AccessPoint {
             path: p,
             ssid: ssid,
-            hw_address: hw_addr
+            hw_address: hw_addr,
+            wpa_flags: wpa_flags
         })
     }
 
@@ -44,6 +47,17 @@ impl<'a> AccessPoint<'a> {
 
         let hw_addr = proxy.hw_address().unwrap();
         hw_addr
+    }
+
+    fn get_wpa_flags(p: &'a dbus::Path) -> u32 {
+        use crate::nm_access_point::OrgFreedesktopNetworkManagerAccessPoint;
+        let con = Connection::new_system().unwrap();
+        let proxy = con.with_proxy("org.freedesktop.NetworkManager",
+                                   p,
+                                   Duration::new(5, 0));
+
+        let wpa_flags = proxy.wpa_flags().unwrap();
+        wpa_flags
     }
 }
 
