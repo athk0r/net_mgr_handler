@@ -75,7 +75,6 @@ impl fmt::Debug for Ip4Config<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::NetworkManager;
 
     #[test]
@@ -84,8 +83,8 @@ mod tests {
         let device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
         let wireless_device = crate::device::WirelessDevice::new_from_device(&device);
         let ap = wireless_device.get_access_point_by_ssid("UPC22AC955").unwrap();
-        let result = manager.activate_connection(wireless_device.clone(), ap);
-        manager.deactivate_connection(device.clone());
+        let _ = manager.activate_connection(wireless_device.clone(), ap);
+        let _ = manager.deactivate_connection(device.clone());
         assert_eq!(device.ip4_config.unwrap().nameserver, "192.168.0.1".to_string())
     }
 }

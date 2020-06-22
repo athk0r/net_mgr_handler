@@ -53,7 +53,7 @@ impl<'a> Device<'a> {
                                    p,
                                    Duration::new(5, 0));
 
-        let active_connection = proxy.active_connection().unwrap();
+        let active_connection = proxy.active_connection().expect("can't get ActiveConnection from DBus");
         active_connection
     }
 
@@ -79,7 +79,7 @@ impl<'a> Device<'a> {
                                    p,
                                    Duration::new(5, 0));
 
-        let dhcp4_config = proxy.dhcp4_config().unwrap();
+        let dhcp4_config = proxy.dhcp4_config().expect("can't get DHCP4Config from DBus");
         dhcp4_config
     }
 
@@ -90,7 +90,7 @@ impl<'a> Device<'a> {
                                    p,
                                    Duration::new(5, 0));
 
-        let ip4_config = proxy.ip4_config().unwrap();
+        let ip4_config = proxy.ip4_config().expect("can't get IP4Config from DBus");
         ip4_config
     }
 
@@ -101,7 +101,7 @@ impl<'a> Device<'a> {
                                    p,
                                    Duration::new(5, 0));
 
-        let ip_interface = proxy.ip_interface().unwrap();
+        let ip_interface = proxy.ip_interface().expect("can't get IPInterface from Dbus");
         ip_interface
     }
 
@@ -111,7 +111,7 @@ impl<'a> Device<'a> {
         let proxy = con.with_proxy("org.freedesktop.NetworkManager",
                                    p,
                                    Duration::new(5, 0));
-        let device_type: DeviceType = DeviceType::from(proxy.device_type().unwrap());
+        let device_type: DeviceType = DeviceType::from(proxy.device_type().expect("can't get DeviceType from DBus"));
         device_type
     }
 }
@@ -139,7 +139,7 @@ impl<'a> WirelessDevice<'a> {
                                    p,
                                    Duration::new(5, 0));
 
-        let hw_address = proxy.hw_address().unwrap();
+        let hw_address = proxy.hw_address().expect("can't get HwAddress from DBus");
         hw_address
     }
 
@@ -152,12 +152,12 @@ impl<'a> WirelessDevice<'a> {
                                    Duration::new(5, 0));
 
         let options: DbusOptions = HashMap::new();
-        let old_last_scan = proxy.last_scan().unwrap();
+        let old_last_scan = proxy.last_scan().expect("can't get LastScan from DBus");
         let _result = proxy.request_scan(options);
-        let mut new_last_scan = proxy.last_scan().unwrap();
+        let mut new_last_scan = proxy.last_scan().expect("can't get LastScan from DBus");
 
         while old_last_scan == new_last_scan {
-            new_last_scan = proxy.last_scan().unwrap();
+            new_last_scan = proxy.last_scan().expect("can't get LastScan from DBus");
         }
     }
 
@@ -168,7 +168,7 @@ impl<'a> WirelessDevice<'a> {
         let proxy = con.with_proxy("org.freedesktop.NetworkManager",
                                    &self.device.path,
                                    Duration::new(5, 0));
-        let access_points: Vec<dbus::Path<'static>> = proxy.get_all_access_points().unwrap();
+        let access_points: Vec<dbus::Path<'static>> = proxy.get_all_access_points().expect("can't get AccessPoints from DBus");
         let mut ret: Vec<Option<AccessPoint>> = Vec::new();
         for ac in access_points {
             ret.push(AccessPoint::from_path(ac));
@@ -183,7 +183,7 @@ impl<'a> WirelessDevice<'a> {
         let proxy = con.with_proxy("org.freedesktop.NetworkManager",
                                    &self.device.path,
                                    Duration::new(5, 0));
-        let active_ap = AccessPoint::from_path(proxy.active_access_point().unwrap());
+        let active_ap = AccessPoint::from_path(proxy.active_access_point().expect("can't get ActiveAccessPoint from DBus"));
         self.active_access_point = active_ap;
     }
 

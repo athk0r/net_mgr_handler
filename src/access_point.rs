@@ -34,8 +34,8 @@ impl<'a> AccessPoint<'a> {
                                    p,
                                    Duration::new(5, 0));
 
-        let ssid = proxy.ssid().unwrap();
-        String::from_utf8(ssid).unwrap()
+        let ssid = proxy.ssid().expect("can't get SSID from DBus");
+        String::from_utf8(ssid).expect("can't create String from given SSID")
     }
 
     fn get_hw_address(p: &'a dbus::Path) -> String {
@@ -45,7 +45,7 @@ impl<'a> AccessPoint<'a> {
                                    p,
                                    Duration::new(5, 0));
 
-        let hw_addr = proxy.hw_address().unwrap();
+        let hw_addr = proxy.hw_address().expect("can't get HwAddr from DBus");
         hw_addr
     }
 
@@ -56,7 +56,7 @@ impl<'a> AccessPoint<'a> {
                                    p,
                                    Duration::new(5, 0));
 
-        let wpa_flags = proxy.wpa_flags().unwrap();
+        let wpa_flags = proxy.wpa_flags().expect("can't get WPAFlags from DBus");
         wpa_flags
     }
 }

@@ -6,11 +6,8 @@ use dbus::Error;
 use crate::access_point::AccessPoint;
 use std::collections::HashMap;
 use dbus::arg::{Variant, RefArg};
-use std::process::Command;
 use crate::setting::Setting;
-use std::convert::{Infallible, TryInto};
 use std::ops::{Deref, DerefMut};
-use std::borrow::Borrow;
 use std::convert::TryFrom;
 
 type DbusOptions<'a> = HashMap<&'a str, Variant<Box<dyn RefArg>>>;
@@ -48,7 +45,7 @@ fn get_connection_settings_802_11_wireless(psk: &str) -> HashMap<&'static str, H
 
 fn get_connection_settings_no_crypt() -> HashMap<&'static str, HashMap<&'static str, Variant<Box<dyn RefArg>>>> {
     let mut ret: HashMap<&str, DbusOptions> = HashMap::new();
-    let mut options: DbusOptions = HashMap::new();
+    let options: DbusOptions = HashMap::new();
     ret.insert("", options);
     ret
 }
@@ -78,7 +75,7 @@ impl NetworkManager{
     }
 
     pub fn add_and_activate_wifi_connection(&self, wd: WirelessDevice, ap: AccessPoint, psk: &str) -> Result<(), Error> {
-        let mut con;
+        let con;
         if ap.wpa_flags != 0 {
             con = get_connection_settings_802_11_wireless(psk);
         } else {
@@ -102,7 +99,7 @@ impl NetworkManager{
         } else {
             return Err(result.err().unwrap())
         }
-        Err(Error::new_failed("Error activating Connection"))
+        //Err(Error::new_failed("Error activating Connection"))
     }
 
     pub fn deactivate_connection(&self, d: Device) -> Result<(), Error>{
@@ -120,7 +117,7 @@ impl NetworkManager{
         } else {
             return self::NetworkManager::add_and_activate_wifi_connection(&self, wd, ap, psk);
         }
-        return Err(Error::new_failed("Error connecting to wifi"))
+        //return Err(Error::new_failed("Error connecting to wifi"))
     }
 
     pub fn find_existing_connection(&self, ap: &AccessPoint) -> bool {
@@ -132,8 +129,8 @@ impl NetworkManager{
         }
         //println!("{:?}", settings);
         for setting in settings {
-            let mut ssid: String;
-            let mut bssids: Vec<&str>;
+            let ssid: String;
+            let bssids: Vec<&str>;
 
             if setting.settings.contains_key("802-11-wireless") {
                 let wireless_settings = setting.settings.get_key_value("802-11-wireless").unwrap().1;
@@ -166,7 +163,6 @@ impl NetworkManager{
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::nm_device::OrgFreedesktopNetworkManagerDeviceWirelessAccessPointRemoved;
 
     #[test]
     fn test_get_all_devices() {
@@ -190,7 +186,7 @@ mod tests {
         let ap = wireless_device.get_access_point_by_ssid("catEmergNet-rpi1");
         if ap.is_some() {
             let result = manager.add_and_activate_wifi_connection(wireless_device.clone(), ap.unwrap().clone(), "test1234");
-            manager.deactivate_connection(device.clone());
+            let _ = manager.deactivate_connection(device.clone());
             assert!(result.is_ok());
         }
     }
@@ -213,7 +209,7 @@ mod tests {
     fn test_activate_connection() {
         let manager = NetworkManager::new_system();
         let device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
-        manager.deactivate_connection(device.clone());
+        let _ = manager.deactivate_connection(device.clone());
         let wireless_device = WirelessDevice::new_from_device(&device);
         let ap = wireless_device.get_access_point_by_ssid("UPC22AC955").unwrap();
         let result = manager.activate_connection(wireless_device.clone(), ap);
@@ -236,11 +232,11 @@ mod tests {
         // test if count of settings still the same
         let manager = NetworkManager::new_system();
         let device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
-        manager.deactivate_connection(device.clone());
+        let _ = manager.deactivate_connection(device.clone());
         let wireless_device = WirelessDevice::new_from_device(&device);
         let ap = wireless_device.get_access_point_by_ssid("UPC22AC955").unwrap();
         let result = manager.connect_wifi(wireless_device.clone(), ap, "x");
-        manager.deactivate_connection(device.clone());
+        let _ = manager.deactivate_connection(device.clone());
         eprintln!("{:?}", result);
         assert!(result.is_ok());
     }

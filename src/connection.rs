@@ -1,12 +1,12 @@
-pub struct Connection {
+/*pub struct Connection {
     con_type: ConnectionType,
     security: Security
-}
+}*/
 
-pub enum ConnectionType {
+/*pub enum ConnectionType {
     Wifi,
-}
+}*/
 
-pub enum Security {
+/*pub enum Security {
     WifiSecurity,
-}
+}*/
