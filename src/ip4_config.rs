@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use dbus::arg::{Variant, RefArg};
+use dbus::arg::{RefArg, Variant};
 use dbus::blocking::Connection;
-use std::time::Duration;
+use std::collections::HashMap;
 use std::fmt;
+use std::time::Duration;
 
 type DbusOptions = HashMap<String, Variant<Box<dyn RefArg>>>;
 
@@ -16,7 +16,7 @@ pub struct Ip4Config<'a> {
 
 impl<'a> Ip4Config<'a> {
     pub fn from_path(p: dbus::Path<'a>) -> Option<Self> {
-        if p.eq(&dbus::strings::Path::new("/").unwrap()){
+        if p.eq(&dbus::strings::Path::new("/").unwrap()) {
             return None;
         }
         let nameserver = self::Ip4Config::get_nameserver(&p);
@@ -34,9 +34,7 @@ impl<'a> Ip4Config<'a> {
     fn get_nameserver<'f>(p: &'a dbus::Path) -> String {
         use crate::nm_ip4_config::OrgFreedesktopNetworkManagerIP4Config;
         let con = Connection::new_system().unwrap();
-        let proxy = con.with_proxy("org.freedesktop.NetworkManager",
-                                   p,
-                                   Duration::new(5, 0));
+        let proxy = con.with_proxy("org.freedesktop.NetworkManager", p, Duration::new(5, 0));
 
         let nameserver: Vec<DbusOptions> = proxy.nameserver_data().unwrap();
         for data in nameserver {
@@ -52,9 +50,7 @@ impl<'a> Ip4Config<'a> {
     fn get_ip<'f>(p: &'a dbus::Path) -> String {
         use crate::nm_ip4_config::OrgFreedesktopNetworkManagerIP4Config;
         let con = Connection::new_system().unwrap();
-        let proxy = con.with_proxy("org.freedesktop.NetworkManager",
-                                   p,
-                                   Duration::new(5, 0));
+        let proxy = con.with_proxy("org.freedesktop.NetworkManager", p, Duration::new(5, 0));
         let ip_data: Vec<DbusOptions> = proxy.address_data().unwrap();
         for data in ip_data {
             if data.contains_key("address") {
@@ -89,11 +85,15 @@ impl<'a> Ip4Config<'a> {
     fn get_next_hop<'f>(p: &'a dbus::Path) -> String {
         use crate::nm_ip4_config::OrgFreedesktopNetworkManagerIP4Config;
         let con = Connection::new_system().unwrap();
-        let proxy = con.with_proxy("org.freedesktop.NetworkManager", p, Duration::new(5,0));
+        let proxy = con.with_proxy("org.freedesktop.NetworkManager", p, Duration::new(5, 0));
         let route_data: Vec<DbusOptions> = proxy.route_data().unwrap();
 
         for data in route_data {
-            if data.contains_key("next-hop") {
+            let dest = data.get("dest");
+            if data.contains_key("next-hop")
+                && dest.is_some()
+                && dest.unwrap().0.as_str().unwrap() == "0.0.0.0"
+            {
                 let next_hop = data.get("next-hop").unwrap();
                 let return_string = next_hop.0.as_str().clone().unwrap();
                 return return_string.to_string();
@@ -121,9 +121,14 @@ mod tests {
         let manager = NetworkManager::new_system();
         let device = manager.get_device_by_ip_iface("wlp2s0").unwrap();
         let wireless_device = crate::device::WirelessDevice::new_from_device(&device);
-        let ap = wireless_device.get_access_point_by_ssid("UPC22AC955").unwrap();
+        let ap = wireless_device
+            .get_access_point_by_ssid("UPC22AC955")
+            .unwrap();
         let _ = manager.activate_connection(wireless_device.clone(), ap);
         let _ = manager.deactivate_connection(device.clone());
-        assert_eq!(device.ip4_config.unwrap().nameserver, "192.168.0.1".to_string())
+        assert_eq!(
+            device.ip4_config.unwrap().nameserver,
+            "192.168.0.1".to_string()
+        )
     }
 }
